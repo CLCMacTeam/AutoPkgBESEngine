@@ -19,7 +19,7 @@ from autopkglib import Processor, ProcessorError
 
 __all__ = ["BESRelevanceProvider"]
 
-QNA = '/Applications/Utilities/QnA.app/Contents/Resources/QnA'
+QNA = '/usr/local/bin/QnA'
 
 class BESRelevanceProvider(Processor):
     description = "Retreives arbitrary relevance data using the QnA utility."
