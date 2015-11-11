@@ -17,7 +17,9 @@ Installation
 
 ```
 autopkg repo-add https://github.com/autopkg/hansen-m-recipes.git
-autopkg run BESEngine.install
+autopkg install BESEngine
+
+autopkg install QnA
 ```
 
 ***The hard way...***
@@ -32,7 +34,7 @@ defaults write com.github.autopkg BES_USERNAME yourAPIUserAccount
 defaults write com.github.autopkg BES_PASSWORD yourAPIUserAccountPassword
 ```
 
-You must have a copy of QnA.app installed in /Applications/Utilities to use the BESRelevanceProvider processor.
+A few related shared processors for using relevance and utilizing Windows recipes are available [here](https://github.com/autopkg/hansen-m-recipes/tree/master/SharedProcessors).
 
 Discussion
 ----------
