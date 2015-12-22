@@ -14,18 +14,19 @@ import hashlib
 import getpass
 import datetime
 import subprocess
-import urllib2
-import xml.dom.minidom
+import requests
 
+from lxml import etree
 from time import gmtime, strftime
+
 from FoundationPlist import FoundationPlist
 from autopkglib import Processor, ProcessorError
 from collections import OrderedDict
 
 __all__ = ["AutoPkgBESEngine"]
-__version__ = '0.32'
+__version__ = '1.0'
 
-QNA = '/Applications/Utilities/QnA.app/Contents/Resources/QnA'
+QNA = '/usr/local/bin/QnA'
 
 class AutoPkgBESEngine(Processor):
     """
@@ -96,7 +97,7 @@ class AutoPkgBESEngine(Processor):
 
     def __init__(self, env):
         self.env = env
-        self.doc = xml.dom.minidom.Document()
+        self.doc = etree.ElementTree()
 
     def get_direct_url(self, url):
         """
@@ -109,9 +110,9 @@ class AutoPkgBESEngine(Processor):
         useragent = FoundationPlist.readPlist(useragentsplist)[0]['user-agent']
 
         headers = {'User-Agent' : useragent.encode('ascii')}
-        request = urllib2.Request(url, None, headers)
+        request = requests.head(url, headers=headers)
 
-        return urllib2.urlopen(request).geturl()
+        return request.headers['location'].encode('ascii')
 
     def get_prefetch(self, file_path, file_name, url):
         """
@@ -119,9 +120,11 @@ class AutoPkgBESEngine(Processor):
         """
 
         sha1 = hashlib.sha1(file(file_path).read()).hexdigest()
+        sha256 = hashlib.sha256(file(file_path).read()).hexdigest()
         size = os.path.getsize(file_path)
 
-        return "prefetch %s sha1:%s size:%d %s" % (file_name, sha1, size, url)
+        return "prefetch %s sha1:%s size:%d %s sha256:%s" % (file_name, sha1,
+                                                             size, url, sha256)
 
     def new_node(self, element_name, node_text="", element_attributes={}):
         """
@@ -129,17 +132,19 @@ class AutoPkgBESEngine(Processor):
         Optionally adds attributes. Returns the new element.
         """
 
-        new_element = self.doc.createElement(element_name)
+        new_element = etree.Element(element_name)
 
         if node_text:
             if any((character in """<>&'\"""") for character in node_text):
-                new_element.appendChild(self.doc.createCDATASection(node_text))
+                new_element.text = etree.CDATA(node_text)
             else:
-                new_element.appendChild(self.doc.createTextNode(node_text))
+                new_element.text = node_text
+        else:
+            new_element = etree.Element(element_name)
 
         if element_attributes:
             for attrib in element_attributes:
-                new_element.setAttribute(attrib, element_attributes[attrib])
+                new_element.set(attrib, element_attributes[attrib])
 
         return new_element
 
@@ -148,10 +153,10 @@ class AutoPkgBESEngine(Processor):
         Creates a new MIME element. Returns the new MIME element.
         """
 
-        new_mime_element = self.doc.createElement('MIMEField')
+        new_mime_element = etree.Element('MIMEField')
 
-        new_mime_element.appendChild(self.new_node('Name', mime_name))
-        new_mime_element.appendChild(self.new_node('Value', mime_value))
+        new_mime_element.append(self.new_node('Name', mime_name))
+        new_mime_element.append(self.new_node('Value', mime_value))
 
         return new_mime_element
 
@@ -160,11 +165,11 @@ class AutoPkgBESEngine(Processor):
         Creates action link description. Returns the description element.
         """
 
-        new_descr_element = self.doc.createElement('Description')
+        new_descr_element = etree.Element('Description')
 
-        new_descr_element.appendChild(self.new_node('PreLink', description[0]))
-        new_descr_element.appendChild(self.new_node('Link', description[1]))
-        new_descr_element.appendChild(self.new_node('PostLink', description[2]))
+        new_descr_element.append(self.new_node('PreLink', description[0]))
+        new_descr_element.append(self.new_node('Link', description[1]))
+        new_descr_element.append(self.new_node('PostLink', description[2]))
 
         return new_descr_element
 
@@ -185,15 +190,15 @@ class AutoPkgBESEngine(Processor):
                                            None,
                                            {'ID': action_dict['ActionNumber']})
 
-        new_action_element.appendChild(
+        new_action_element.append(
             self.new_link_description(action_dict['Description']))
 
-        new_action_element.appendChild(
+        new_action_element.append(
             self.new_node('ActionScript',
                           action_dict['ActionScript'],
                           {'MIMEType': 'application/x-Fixlet-Windows-Shell'}))
 
-        new_action_element.appendChild(
+        new_action_element.append(
             self.new_node('SuccessCriteria',
                           None,
                           {'Option': action_dict['SuccessCriteria']}))
@@ -298,62 +303,58 @@ class AutoPkgBESEngine(Processor):
                     (bes_displayname, bes_version))
 
         root_schema = {
-            'xmlns:xsi':'http://www.w3.org/2001/XMLSchema-instance',
-            'xsi:noNamespaceSchemaLocation': 'BES.xsd'
+            "{http://www.w3.org/2001/XMLSchema-instance}" +
+            "noNamespaceSchemaLocation": 'BES.xsd'
         }
 
         root = self.new_node('BES', None, root_schema)
-
-        self.doc.appendChild(root)
+        self.doc._setroot(root)
 
         # Create Top Level 'Task' Tag
         node = self.new_node('Task', None)
-        root.appendChild(node)
+        root.append(node)
 
         # Append Title and Description
-        node.appendChild(self.new_node('Title', bes_title))
-        node.appendChild(self.new_node('Description', bes_description))
+        node.append(self.new_node('Title', bes_title))
+        node.append(self.new_node('Description', bes_description))
 
         # Append Relevance
         for line in bes_relevance:
             if os.path.isfile(QNA):
                 self.validate_relevance(line)
-                node.appendChild(self.new_node('Relevance', line))
-            else:
-                node.appendChild(self.new_node('Relevance', line))
+            
+            node.append(self.new_node('Relevance', line))
 
         # Append Details Dictionary
         for key, value in details.items():
-            node.appendChild(self.new_node(key, value))
+            node.append(self.new_node(key, value))
 
         # Append MIME Source Data
-        node.appendChild(self.new_mime('x-fixlet-source',
-                                       os.path.basename(__file__)))
-        node.appendChild(
+        node.append(self.new_mime('x-fixlet-source',
+                                  os.path.basename(__file__)))
+        node.append(
             self.new_mime('x-fixlet-modification-time',
                           strftime("%a, %d %b %Y %X +0000", gmtime())))
 
-        node.appendChild(self.new_node('Domain', 'BESC'))
+        node.append(self.new_node('Domain', 'BESC'))
 
         # Append Default Action
         for action in sorted(bes_actions.iterkeys()):
             if bes_actions[action].get('ActionName', None) == 'DefaultAction':
-                node.appendChild(self.new_action(bes_actions[action]))
+                node.append(self.new_action(bes_actions[action]))
                 bes_actions.pop(action, None)
 
         # Append Actions
         for action in sorted(bes_actions.iterkeys()):
-            node.appendChild(self.new_action(bes_actions[action]))
+            node.append(self.new_action(bes_actions[action]))
 
         # Write Final BES File to Disk
-        outputfile_handle = open("%s/Deploy %s %s.bes" %
-                                 (self.env.get("RECIPE_CACHE_DIR"),
-                                  bes_displayname, bes_version), "wb")
+        bes_file = "%s/Deploy %s %s.bes" % (self.env.get("RECIPE_CACHE_DIR"),
+                                            bes_displayname, bes_version)
 
-        outputfile_handle.write(self.doc.toxml(encoding="UTF-8"))
-        outputfile_handle.close()
+        self.doc.write(bes_file, encoding="UTF-8", xml_declaration=True)
 
-        self.env['bes_file'] = outputfile_handle.name
+        self.env['bes_file'] = bes_file
         self.output("Output BES File: '%s'" % self.env.get("bes_file"))
 
 if __name__ == "__main__":

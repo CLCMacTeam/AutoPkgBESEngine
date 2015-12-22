@@ -11,12 +11,15 @@ Created by Matt Hansen (mah60@psu.edu) on 2013-11-04.
 AutoPkg Processor for importing tasks using the BigFix RESTAPI
 """
 
-import urllib2
-import base64
-import sys
-from xml.dom import minidom
+import besapi
 
 from autopkglib import Processor, ProcessorError
+
+import requests
+try:
+    requests.packages.urllib3.disable_warnings()
+except:
+    pass
 
 __all__ = ["BESImporter"]
 
@@ -58,86 +61,53 @@ class BESImporter(Processor):
     }
     __doc__ = description
 
-    def send_api_request(self, api_url, auth_string, bes_file=None):
-        """Send generic BES API request"""
-        request = urllib2.Request(api_url)
-
-        request.add_header("Authorization", "Basic %s" % auth_string)
-        request.add_header("Content-Type", "application/xml")
-
-        # Read bes_file contents and add to request
-        if bes_file:
-            bes_data = open(bes_file).read()
-            request.add_data(bes_data)
-
-        # Request POST to Console API
-        try:
-            return urllib2.urlopen(request)
-
-        except urllib2.HTTPError, error:
-            self.output("HTTPError: [%s] %s" % (error.code, error.read()))
-            sys.exit(1)
-        except urllib2.URLError, error:
-            self.output("URLError: %s" % (error.args))
-            sys.exit(1)
 
     def main(self):
         """BESImporter Main Method"""
         # Assign BES Console Variables
         bes_file = self.env.get("bes_file")
+        bes_title = self.env.get("bes_title")
         bes_customsite = self.env.get("bes_customsite")
-        BES_ROOTSERVER = self.env.get("BES_ROOTSERVER")
+        
         BES_USERNAME = self.env.get("BES_USERNAME")
         BES_PASSWORD = self.env.get("BES_PASSWORD")
+        BES_ROOTSERVER = self.env.get("BES_ROOTSERVER")
 
-        bes_title = self.env.get("bes_title")
+        # BES Console Connection
+        B = besapi.BESConnection(BES_USERNAME,
+                                BES_PASSWORD,
+                                BES_ROOTSERVER,
+                                verify=False)
 
-        # Console Connection Strings
-        auth_string = base64.encodestring('%s:%s' %
-                                          (BES_USERNAME, BES_PASSWORD)).strip()
+        self.output("Searching: '%s' for %s" % (bes_customsite, bes_title))
+        tasks = B.get('tasks/custom/%s' % bes_customsite)
 
-        url = BES_ROOTSERVER + "/tasks/custom/" + bes_customsite
-
-        self.output("Searching: '%s' for %s" % (url, bes_title))
-
-        search_request = self.send_api_request(url, auth_string)
-        search_dom = minidom.parseString(search_request.read())
-
-        dupe_tasks = []
-        for result in search_dom.getElementsByTagName('Task') or []:
-            if (result.getElementsByTagName('Name')[0].firstChild.nodeValue ==
-                    bes_title):
-
-                dupe_tasks.append(int(
-                    result.getElementsByTagName('ID')[0].firstChild.nodeValue))
-
+        duplicate_task = False
+        for task in tasks().iterchildren():
+            if (task.Name == bes_title):
+                duplicate_task = True
+                
                 self.output("Found:[%s] %s - %s    " % (
-                    result.getElementsByTagName('ID')[0].firstChild.nodeValue,
-                    result.getElementsByTagName('Name')[0].firstChild.nodeValue,
-                    result.attributes['LastModified'].value))
+                    task.ID, task.Name, task.get('LastModified')))
 
-        if not dupe_tasks:
-
+        if not duplicate_task:
             self.output("Importing: '%s' to %s/tasks/custom/%s" %
                         (bes_file, BES_ROOTSERVER, bes_customsite))
 
-            import_request = self.send_api_request(url, auth_string, bes_file)
-
+            # Upload task
+            with open(bes_file, 'r') as bes_file_handle:
+                upload_result = B.post('tasks/custom/%s' % bes_customsite, bes_file_handle)
+    
             # Read and parse Console return
-            result_dom = minidom.parseString(import_request.read())
-            result_task = result_dom.getElementsByTagName('Task') or []
-            result_name = result_task[-1].getElementsByTagName('Name')
-            result_id = result_task[-1].getElementsByTagName('ID')
-
-            self.env['bes_id'] = result_id[-1].firstChild.nodeValue
+            self.env['bes_id'] = str(upload_result().Task.ID)
             self.output("Result (%s): [%s] %s - %s    " % (
-                import_request.getcode(),
-                result_id[-1].firstChild.nodeValue,
-                result_name[-1].firstChild.nodeValue,
-                result_task[-1].attributes['LastModified'].value))
+                upload_result.request.status_code,
+                upload_result().Task.ID,
+                upload_result().Task.Name,
+                upload_result().Task.get('LastModified')))
         else:
-            self.output("Skipping Import: " + str(dupe_tasks))
-            self.env['bes_id'] = str(dupe_tasks)
+            self.output("Duplicate, skipping import.")
+            self.env['bes_id'] = None
 
 if __name__ == "__main__":
     processor = BESImporter()
