@@ -112,7 +112,7 @@ class AutoPkgBESEngine(Processor):
         headers = {'User-Agent' : useragent.encode('ascii')}
         request = requests.head(url, headers=headers)
 
-        return request.headers['location'].encode('ascii')
+        return request.headers.get('location', request.url).encode('ascii')
 
     def get_prefetch(self, file_path, file_name, url):
         """
