@@ -13,6 +13,11 @@ BESRelevanceProvider.py - AutoPkg Processor for retreiving relevance data for ta
 
 Installation
 ------------
+***Python Requirements***
+
+- lxml
+- [besapi](https://github.com/CLCMacTeam/besapi)
+
 ***The easy way...***
 
 ```
