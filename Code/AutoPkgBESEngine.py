@@ -14,17 +14,19 @@ import hashlib
 import getpass
 import datetime
 import subprocess
-import requests
 
-from lxml import etree
+
 from time import gmtime, strftime
-
-from FoundationPlist import FoundationPlist
-from autopkglib import Processor, ProcessorError
 from collections import OrderedDict
 
+import requests
+from lxml import etree
+from FoundationPlist import FoundationPlist
+from autopkglib import Processor, ProcessorError
+
+
 __all__ = ["AutoPkgBESEngine"]
-__version__ = '1.0'
+__version__ = '1.1'
 
 QNA = '/usr/local/bin/QnA'
 
@@ -85,6 +87,11 @@ class AutoPkgBESEngine(Processor):
             "required": True,
             "description":
                 "A nested dictionary of a single action or multiple actions."
+        },
+        "bes_selfservice": {
+            "required": False,
+            "description":
+                "Add SWD self-service MIME fields to task, defaults to False."
         }
     }
     output_variables = {
@@ -119,12 +126,30 @@ class AutoPkgBESEngine(Processor):
         Return a prepared prefetch statement string.
         """
 
-        sha1 = hashlib.sha1(file(file_path).read()).hexdigest()
-        sha256 = hashlib.sha256(file(file_path).read()).hexdigest()
-        size = os.path.getsize(file_path)
+        sha1 = self.get_sha1(file_path)
+        sha256 = self.get_sha256(file_path)
+        size = self.get_size(file_path)
 
         return "prefetch %s sha1:%s size:%d %s sha256:%s" % (file_name, sha1,
                                                              size, url, sha256)
+
+    def get_sha1(self, file_path=""):
+        if not file_path:
+            file_path = self.env.get("bes_softwareinstaller", self.env.get("pathname"))
+
+        return hashlib.sha1(file(file_path).read()).hexdigest()
+
+    def get_sha256(self, file_path=""):
+        if not file_path:
+            file_path = self.env.get("bes_softwareinstaller", self.env.get("pathname"))
+
+        return hashlib.sha256(file(file_path).read()).hexdigest()
+
+    def get_size(self, file_path=""):
+        if not file_path:
+            file_path = self.env.get("bes_softwareinstaller", self.env.get("pathname"))
+
+        return os.path.getsize(file_path)
 
     def new_node(self, element_name, node_text="", element_attributes={}):
         """
@@ -240,6 +265,13 @@ class AutoPkgBESEngine(Processor):
             self.env.get("bes_overrideurl",
                          self.env.get("url")))
 
+        user = getpass.getuser()
+        gmtime_now = strftime("%a, %d %b %Y %X +0000", gmtime())
+
+        bes_sha1 = self.get_sha1()
+        bes_size = self.get_size()
+        bes_sha256 = self.get_sha256()
+
         bes_displayname = self.env.get("NAME")
 
         bes_version = self.env.get("bes_version")
@@ -274,6 +306,8 @@ class AutoPkgBESEngine(Processor):
         bes_preactionscript = self.env.get("bes_preactionscript", "")
         bes_postactionscript = self.env.get("bes_postactionscript", "")
 
+        bes_selfservice = self.env.get("bes_selfservice", "False")
+
         # Prepend prefetch line to action script for all actions
         # Prepend and append pre and post actionscript additions
         for action in bes_actions:
@@ -291,7 +325,7 @@ class AutoPkgBESEngine(Processor):
              str(os.path.getsize(self.env.get(
                  "bes_softwareinstaller", self.env.get("pathname"))))),
             ('Source', "%s v%s" % (os.path.basename(__file__), __version__)),
-            ('SourceID', getpass.getuser()),
+            ('SourceID', user),
             ('SourceReleaseDate', str(datetime.datetime.now())[:10]),
             ('SourceSeverity', ""),
             ('CVENames', ""),
@@ -322,16 +356,95 @@ class AutoPkgBESEngine(Processor):
         for line in bes_relevance:
             if os.path.isfile(QNA):
                 self.validate_relevance(line)
-            
+
             node.append(self.new_node('Relevance', line))
 
         # Append Details Dictionary
         for key, value in details.items():
             node.append(self.new_node(key, value))
 
-        # Append MIME Source Data
-        node.append(self.new_mime('x-fixlet-source',
-                                  os.path.basename(__file__)))
+        # Add Self-Service Data, If Specified
+        if bes_selfservice in ['True', 'true']:
+            self.output("Appending Self-Services MIME Fields...")
+
+            node.append(self.new_mime('x-fixlet-swdCommandOverride',
+                                      "%s" % bes_filename))
+            node.append(self.new_mime('x-fixlet-swd-wizard-data',
+                                      ("{\"comment\":null,"
+                                       "\"pkgvariablekey\":\"SWD_Package_%s_0\","
+                                       "\"pkgTag\":\"\","
+                                       "\"vendor\":\"\","
+                                       "\"description\":\"\","
+                                       "\"lastmodified\":\"%s\","
+                                       "\"files\":[{\"ReferenceName\":\"/%s/download.bfswd\","
+                                       "\"id\":\"%s_0\","
+                                       "\"folderoffset\":\"\","
+                                       "\"osd_metadata\":null,"
+                                       "\"msi_metadata\":null,"
+                                       "\"sha1\":\"%s\","
+                                       "\"HasAnonymousReference\":true,"
+                                       "\"size\":%s,"
+                                       "\"filename\":\"%s\","
+                                       "\"exe_metadata\":{\"CompanyName\":\"\","
+                                       "\"FileVersion\":\"\","
+                                       "\"ProductVersion\":\"\","
+                                       "\"ProductName\":\"\","
+                                       "\"exe_metadata_version\":\"\"},"
+                                       "\"spb_metadata\":null,"
+                                       "\"ReferenceID\":0,"
+                                       "\"sha256\":\"%s\","
+                                       "\"appv_metadata\":null,"
+                                       "\"dateadded\":\"%s\","
+                                       "\"compressed_data_for_package\":false}],"
+                                       "\"product\":\"%s\","
+                                       "\"creator\":\"%s\","
+                                       "\"owner\":\"%s\","
+                                       "\"version\":\"%s\"}") %
+                                      (user, gmtime_now, bes_sha1,
+                                       bes_sha1, bes_sha1, bes_size,
+                                       bes_filename, bes_sha256,
+                                       gmtime_now, bes_displayname,
+                                       user, user, bes_version)))
+            node.append(self.new_mime('x-fixlet-swdPackageID',
+                                      "SWD_Package_%s_0" % (user)))
+            node.append(self.new_mime('x-fixlet-advancedLogOptions',
+                                      ("{\"individualLog\":false,"
+                                       "\"uploadTheLog\":false,"
+                                       "\"individualLogCustomerName\":null}")))
+            node.append(self.new_mime('x-fixlet-advancedPathOptions',
+                                      ("{\"customPath\":false,"
+                                       "\"customPathName\":null,"
+                                       "\"deleteCustomPath\":false}")))
+            node.append(self.new_mime('x-fixlet-source',
+                                      os.path.basename(__file__)))
+            node.append(self.new_mime('x-fixlet-prePostInstall',
+                                      ("{\"preType\":null,"
+                                       "\"preInstall\":null,"
+                                       "\"selected\":false,"
+                                       "\"postType\":null,"
+                                       "\"postInstall\":null}")))
+            node.append(self.new_mime('x-fixlet-runAsSystem',
+                                      "true"))
+            node.append(self.new_mime('x-fixlet-pkgTag',
+                                      ""))
+            node.append(self.new_mime('x-fixlet-pkgType',
+                                      ""))
+            node.append(self.new_mime('x-fixlet-swdSelectedFiles',
+                                      "[\"%s\"]" % bes_sha1.upper()))
+            node.append(self.new_mime('x-fixlet-runFileSha1',
+                                      bes_sha1.upper()))
+            node.append(self.new_mime('x-fixlet-canPreserveCustom',
+                                      "true"))
+            node.append(self.new_mime('x-fixlet-adf-wizard-source',
+                                      "Software Distribution_SoftwareDistribution"))
+            node.append(self.new_mime('x-fixlet-adf-wizard-data',
+                                      ""))
+        else:
+            # And If Not, Just Append MIME Source Data
+            node.append(self.new_mime('x-fixlet-source',
+                                      os.path.basename(__file__)))
+
+        # Add Modification Time
         node.append(
             self.new_mime('x-fixlet-modification-time',
                           strftime("%a, %d %b %Y %X +0000", gmtime())))
