@@ -58,6 +58,9 @@ class BESImporter(Processor):
             "description":
                 "The resulting ID of the BES console import."
         },
+        "bes_importer_summary_result": {
+            "description": "Description of BigFix import results."
+        },
     }
     __doc__ = description
 
@@ -105,6 +108,19 @@ class BESImporter(Processor):
                 upload_result().Task.ID,
                 upload_result().Task.Name,
                 upload_result().Task.get('LastModified')))
+            
+            # Create summary result data    
+            self.env["bes_importer_summary_result"] = {
+                "summary_text": "The following tasks were imported into BigFix:",
+                "report_fields": ["Task ID", "Task Name", "Site"],
+                
+                "data": {
+                    "Task ID": str(upload_result().Task.ID),
+                    "Task Name": str(upload_result().Task.Name),
+                    "Site": str(bes_customsite),
+                }
+            }
+            
         else:
             self.output("Duplicate, skipping import.")
             self.env['bes_id'] = None
