@@ -22,7 +22,7 @@ from collections import OrderedDict
 import requests
 from lxml import etree
 from FoundationPlist import FoundationPlist
-from autopkglib import Processor, ProcessorError
+from autopkglib import Processor, ProcessorError, get_autopkg_version
 
 
 __all__ = ["AutoPkgBESEngine"]
@@ -324,7 +324,8 @@ class AutoPkgBESEngine(Processor):
             ('DownloadSize',
              str(os.path.getsize(self.env.get(
                  "bes_softwareinstaller", self.env.get("pathname"))))),
-            ('Source', "%s v%s" % (os.path.basename(__file__), __version__)),
+            ('Source', "%s v%s (%s)" % (os.path.basename(__file__),
+                                        __version__, str(get_autopkg_version()))),
             ('SourceID', user),
             ('SourceReleaseDate', str(datetime.datetime.now())[:10]),
             ('SourceSeverity', ""),
