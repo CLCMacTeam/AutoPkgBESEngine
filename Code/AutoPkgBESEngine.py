@@ -391,9 +391,9 @@ class AutoPkgBESEngine(Processor):
             if bes_icon:
                 bes_b64icon = self.get_icon(bes_icon)
                 node.append(self.new_mime('action-ui-metadata',
-                                         '{"version": "%s",
-                                         "size": "%s", 
-                                         "icon": "%s"}' % 
+                                         ("{\"version\": \"%s\","
+                                         "\"size\": \"%s\"," 
+                                         "\"icon\": \"%s\"}") % 
                                          (bes_version, bes_size, bes_b64icon)))
             else:
                 node.append(self.new_mime('action-ui-metadata',
