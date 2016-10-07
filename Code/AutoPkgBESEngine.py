@@ -10,6 +10,7 @@ Created by Matt Hansen (mah60@psu.edu) on 2013-10-08.
 AutoPkg Processor for BES (BigFix) XML Tasks and Fixlets
 """
 import os
+import base64
 import hashlib
 import getpass
 import datetime
@@ -26,7 +27,7 @@ from autopkglib import Processor, ProcessorError, get_autopkg_version
 
 
 __all__ = ["AutoPkgBESEngine"]
-__version__ = '1.1'
+__version__ = '1.2'
 
 QNA = '/usr/local/bin/QnA'
 
@@ -92,6 +93,16 @@ class AutoPkgBESEngine(Processor):
             "required": False,
             "description":
                 "Add SWD self-service MIME fields to task, defaults to False."
+        },
+        "bes_ssa": {
+            "required": False,
+            "description":
+                "Add self-service app UI metadata to task, defaults to False."
+        },
+        "bes_icon": {
+            "required": False,
+            "description":
+                "Base64 encoded icon to add to self-service app UI metadata."
         }
     }
     output_variables = {
@@ -150,6 +161,15 @@ class AutoPkgBESEngine(Processor):
             file_path = self.env.get("bes_softwareinstaller", self.env.get("pathname"))
 
         return os.path.getsize(file_path)
+        
+    def get_icon(self, bes_icon):
+        r = requests.get(bes_icon)
+        
+        b64content = base64.b64encode(r.content)
+        #content_type = r.headers['Content-Type']
+        content_type = "image/%s" % r.url.split('.')[-1]
+
+        return "data:%s;base64,%s" % (content_type, b64content)
 
     def new_node(self, element_name, node_text="", element_attributes={}):
         """
@@ -307,6 +327,8 @@ class AutoPkgBESEngine(Processor):
         bes_postactionscript = self.env.get("bes_postactionscript", "")
 
         bes_selfservice = self.env.get("bes_selfservice", "False")
+        bes_ssa = self.env.get("bes_ssa", "False")
+        bes_icon = self.env.get("bes_icon", False)
 
         # Prepend prefetch line to action script for all actions
         # Prepend and append pre and post actionscript additions
@@ -363,6 +385,20 @@ class AutoPkgBESEngine(Processor):
         # Append Details Dictionary
         for key, value in details.items():
             node.append(self.new_node(key, value))
+
+        # Add Self-Service UI Data, If Specified
+        if bes_ssa in ['True', 'true']:
+            if bes_icon:
+                bes_b64icon = self.get_icon(bes_icon)
+                node.append(self.new_mime('action-ui-metadata',
+                                         '{"version": "%s",
+                                         "size": "%s", 
+                                         "icon": "%s"}' % 
+                                         (bes_version, bes_size, bes_b64icon)))
+            else:
+                node.append(self.new_mime('action-ui-metadata',
+                                         '{"version": "%s", "size": "%s"}' % 
+                                         (bes_version, bes_size)))
 
         # Add Self-Service Data, If Specified
         if bes_selfservice in ['True', 'true']:
