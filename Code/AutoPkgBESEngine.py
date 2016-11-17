@@ -27,7 +27,7 @@ from autopkglib import Processor, ProcessorError, get_autopkg_version
 
 
 __all__ = ["AutoPkgBESEngine"]
-__version__ = '1.2'
+__version__ = '1.3'
 
 QNA = '/usr/local/bin/QnA'
 
@@ -103,6 +103,11 @@ class AutoPkgBESEngine(Processor):
             "required": False,
             "description":
                 "Base64 encoded icon to add to self-service app UI metadata."
+        },
+        "bes_additionalmimefields": {
+            "required": False,
+            "description":
+                "A dictionary of additional MIME fields to add to the task."
         }
     }
     output_variables = {
@@ -161,10 +166,10 @@ class AutoPkgBESEngine(Processor):
             file_path = self.env.get("bes_softwareinstaller", self.env.get("pathname"))
 
         return os.path.getsize(file_path)
-        
+
     def get_icon(self, bes_icon):
         r = requests.get(bes_icon)
-        
+
         b64content = base64.b64encode(r.content)
         #content_type = r.headers['Content-Type']
         content_type = "image/%s" % r.url.split('.')[-1]
@@ -326,9 +331,13 @@ class AutoPkgBESEngine(Processor):
         bes_preactionscript = self.env.get("bes_preactionscript", "")
         bes_postactionscript = self.env.get("bes_postactionscript", "")
 
+        # Legacy ClientUI
         bes_selfservice = self.env.get("bes_selfservice", "False")
+
         bes_ssa = self.env.get("bes_ssa", "False")
         bes_icon = self.env.get("bes_icon", False)
+
+        bes_additionalmimefields = self.env.get("bes_additionalmimefields", False)
 
         # Prepend prefetch line to action script for all actions
         # Prepend and append pre and post actionscript additions
@@ -392,12 +401,12 @@ class AutoPkgBESEngine(Processor):
                 bes_b64icon = self.get_icon(bes_icon)
                 node.append(self.new_mime('action-ui-metadata',
                                          ("{\"version\": \"%s\","
-                                         "\"size\": \"%s\"," 
-                                         "\"icon\": \"%s\"}") % 
+                                         "\"size\": \"%s\","
+                                         "\"icon\": \"%s\"}") %
                                          (bes_version, bes_size, bes_b64icon)))
             else:
                 node.append(self.new_mime('action-ui-metadata',
-                                         '{"version": "%s", "size": "%s"}' % 
+                                         '{"version": "%s", "size": "%s"}' %
                                          (bes_version, bes_size)))
 
         # Add Self-Service Data, If Specified
@@ -481,6 +490,11 @@ class AutoPkgBESEngine(Processor):
             node.append(self.new_mime('x-fixlet-source',
                                       os.path.basename(__file__)))
 
+        # Add Additional MIME Fields
+        if bes_additionalmimefields:
+            for name, value in bes_additionalmimefields.iteritems():
+                node.append(self.new_mime(name, value))
+
         # Add Modification Time
         node.append(
             self.new_mime('x-fixlet-modification-time',
@@ -510,4 +524,3 @@ class AutoPkgBESEngine(Processor):
 if __name__ == "__main__":
     processor = AutoPkgBESEngine()
     processor.execute_shell()
-    
