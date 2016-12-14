@@ -89,11 +89,6 @@ class AutoPkgBESEngine(Processor):
             "description":
                 "A nested dictionary of a single action or multiple actions."
         },
-        "bes_selfservice": {
-            "required": False,
-            "description":
-                "Add SWD self-service MIME fields to task, defaults to False."
-        },
         "bes_ssa": {
             "required": False,
             "description":
@@ -331,9 +326,6 @@ class AutoPkgBESEngine(Processor):
         bes_preactionscript = self.env.get("bes_preactionscript", "")
         bes_postactionscript = self.env.get("bes_postactionscript", "")
 
-        # Legacy ClientUI
-        bes_selfservice = self.env.get("bes_selfservice", "False")
-
         bes_ssa = self.env.get("bes_ssa", "False")
         bes_icon = self.env.get("bes_icon", False)
 
@@ -400,95 +392,19 @@ class AutoPkgBESEngine(Processor):
             if bes_icon:
                 bes_b64icon = self.get_icon(bes_icon)
                 node.append(self.new_mime('action-ui-metadata',
-                                         ("{\"version\": \"%s\","
-                                         "\"size\": \"%s\","
-                                         "\"icon\": \"%s\"}") %
-                                         (bes_version, bes_size, bes_b64icon)))
+                                          ("{\"version\": \"%s\","
+                                           "\"size\": \"%s\","
+                                           "\"icon\": \"%s\"}") % (bes_version,
+                                                                   bes_size,
+                                                                   bes_b64icon)))
             else:
                 node.append(self.new_mime('action-ui-metadata',
-                                         '{"version": "%s", "size": "%s"}' %
-                                         (bes_version, bes_size)))
+                                          '{"version": "%s", "size": "%s"}' % (bes_version,
+                                                                               bes_size)))
 
-        # Add Self-Service Data, If Specified
-        if bes_selfservice in ['True', 'true']:
-            self.output("Appending Self-Services MIME Fields...")
-
-            node.append(self.new_mime('x-fixlet-swdCommandOverride',
-                                      "%s" % bes_filename))
-            node.append(self.new_mime('x-fixlet-swd-wizard-data',
-                                      ("{\"comment\":null,"
-                                       "\"pkgvariablekey\":\"SWD_Package_%s_0\","
-                                       "\"pkgTag\":\"\","
-                                       "\"vendor\":\"\","
-                                       "\"description\":\"\","
-                                       "\"lastmodified\":\"%s\","
-                                       "\"files\":[{\"ReferenceName\":\"/%s/download.bfswd\","
-                                       "\"id\":\"%s_0\","
-                                       "\"folderoffset\":\"\","
-                                       "\"osd_metadata\":null,"
-                                       "\"msi_metadata\":null,"
-                                       "\"sha1\":\"%s\","
-                                       "\"HasAnonymousReference\":true,"
-                                       "\"size\":%s,"
-                                       "\"filename\":\"%s\","
-                                       "\"exe_metadata\":{\"CompanyName\":\"\","
-                                       "\"FileVersion\":\"\","
-                                       "\"ProductVersion\":\"\","
-                                       "\"ProductName\":\"\","
-                                       "\"exe_metadata_version\":\"\"},"
-                                       "\"spb_metadata\":null,"
-                                       "\"ReferenceID\":0,"
-                                       "\"sha256\":\"%s\","
-                                       "\"appv_metadata\":null,"
-                                       "\"dateadded\":\"%s\","
-                                       "\"compressed_data_for_package\":false}],"
-                                       "\"product\":\"%s\","
-                                       "\"creator\":\"%s\","
-                                       "\"owner\":\"%s\","
-                                       "\"version\":\"%s\"}") %
-                                      (user, gmtime_now, bes_sha1,
-                                       bes_sha1, bes_sha1, bes_size,
-                                       bes_filename, bes_sha256,
-                                       gmtime_now, bes_displayname,
-                                       user, user, bes_version)))
-            node.append(self.new_mime('x-fixlet-swdPackageID',
-                                      "SWD_Package_%s_0" % (user)))
-            node.append(self.new_mime('x-fixlet-advancedLogOptions',
-                                      ("{\"individualLog\":false,"
-                                       "\"uploadTheLog\":false,"
-                                       "\"individualLogCustomerName\":null}")))
-            node.append(self.new_mime('x-fixlet-advancedPathOptions',
-                                      ("{\"customPath\":false,"
-                                       "\"customPathName\":null,"
-                                       "\"deleteCustomPath\":false}")))
-            node.append(self.new_mime('x-fixlet-source',
-                                      os.path.basename(__file__)))
-            node.append(self.new_mime('x-fixlet-prePostInstall',
-                                      ("{\"preType\":null,"
-                                       "\"preInstall\":null,"
-                                       "\"selected\":false,"
-                                       "\"postType\":null,"
-                                       "\"postInstall\":null}")))
-            node.append(self.new_mime('x-fixlet-runAsSystem',
-                                      "true"))
-            node.append(self.new_mime('x-fixlet-pkgTag',
-                                      ""))
-            node.append(self.new_mime('x-fixlet-pkgType',
-                                      ""))
-            node.append(self.new_mime('x-fixlet-swdSelectedFiles',
-                                      "[\"%s\"]" % bes_sha1.upper()))
-            node.append(self.new_mime('x-fixlet-runFileSha1',
-                                      bes_sha1.upper()))
-            node.append(self.new_mime('x-fixlet-canPreserveCustom',
-                                      "true"))
-            node.append(self.new_mime('x-fixlet-adf-wizard-source',
-                                      "Software Distribution_SoftwareDistribution"))
-            node.append(self.new_mime('x-fixlet-adf-wizard-data',
-                                      ""))
-        else:
-            # And If Not, Just Append MIME Source Data
-            node.append(self.new_mime('x-fixlet-source',
-                                      os.path.basename(__file__)))
+        # Append MIME Source Data
+        node.append(self.new_mime('x-fixlet-source',
+                                  os.path.basename(__file__)))
 
         # Add Additional MIME Fields
         if bes_additionalmimefields:
