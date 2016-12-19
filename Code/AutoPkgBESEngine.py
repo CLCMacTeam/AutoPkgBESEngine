@@ -452,9 +452,9 @@ class AutoPkgBESEngine(Processor):
 
         # Append SSA Action
         if bes_ssaaction and bes_ssaaction_copy:
-                bes_ssaaction_copy['Description'] = ['Action10 - ',
-                                                     'Make available in ',
-                                                     'Self Service']
+                bes_ssaaction_copy['Description'] = ['',
+                                                     'Make available',
+                                                     ' in Self Service']
                 bes_ssaaction_copy['ActionNumber'] = 'Action10'
                 bes_ssaaction_copy['ActionName'] = 'Action'
 
