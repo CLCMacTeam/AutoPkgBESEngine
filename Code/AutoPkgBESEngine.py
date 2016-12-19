@@ -218,7 +218,19 @@ class AutoPkgBESEngine(Processor):
 
         return new_descr_element
 
-    def new_action(self, action_dict):
+    def new_action_settings(self, settings):
+        """
+        Creates action settings from a dictionary. Returns the settings element.
+        """
+
+        new_action_settings_element = etree.Element('Settings')
+
+        for key, value in settings.items():
+            new_action_settings_element.append(self.new_node(key, value))
+
+        return new_action_settings_element
+
+    def new_action(self, action_dict, ssa=False):
         """
         Create new action from a dictionary. Returns the new action.
         """
@@ -247,6 +259,15 @@ class AutoPkgBESEngine(Processor):
             self.new_node('SuccessCriteria',
                           None,
                           {'Option': action_dict['SuccessCriteria']}))
+
+        if ssa:
+            settings = OrderedDict((('ActionUITitle', self.env.get('NAME')),
+                                   ('HasEndTime', 'false'),
+                                   ('IsOffer', 'true'),
+                                   ('OfferCategory', self.env.get('OfferCategory', '')),
+                                   ('OfferDescriptionHTML', self.env.get('OfferDescriptionHTML', '')),
+                                  ))
+            new_action_element.append(self.new_action_settings(settings))
 
         return new_action_element
 
@@ -286,11 +307,8 @@ class AutoPkgBESEngine(Processor):
                          self.env.get("url")))
 
         user = getpass.getuser()
-        gmtime_now = strftime("%a, %d %b %Y %X +0000", gmtime())
-
-        bes_sha1 = self.get_sha1()
         bes_size = self.get_size()
-        bes_sha256 = self.get_sha256()
+        gmtime_now = strftime("%a, %d %b %Y %X +0000", gmtime())
 
         bes_displayname = self.env.get("NAME")
 
@@ -308,10 +326,9 @@ class AutoPkgBESEngine(Processor):
         bes_filename = bes_filename.strip().replace(' ', '_')
 
         bes_prefetch = self.env.get("bes_prefetch",
-                                    self.get_prefetch(
-                                        self.env.get("bes_softwareinstaller",
-                                                     self.env.get("pathname")),
-                                        bes_filename, url))
+                                    self.get_prefetch(None,
+                                                      bes_filename,
+                                                      url))
 
         bes_description = self.env.get("bes_description",
                                        'This task will deploy %s %s.<BR><BR>'
@@ -327,6 +344,7 @@ class AutoPkgBESEngine(Processor):
         bes_postactionscript = self.env.get("bes_postactionscript", "")
 
         bes_ssa = self.env.get("bes_ssa", "False")
+        bes_ssaaction = self.env.get("bes_ssaaction", None)
         bes_icon = self.env.get("bes_icon", False)
 
         bes_additionalmimefields = self.env.get("bes_additionalmimefields", False)
@@ -413,13 +431,17 @@ class AutoPkgBESEngine(Processor):
 
         # Add Modification Time
         node.append(
-            self.new_mime('x-fixlet-modification-time',
-                          strftime("%a, %d %b %Y %X +0000", gmtime())))
+            self.new_mime('x-fixlet-modification-time', gmtime_now))
 
         node.append(self.new_node('Domain', 'BESC'))
 
         # Append Default Action
+        bes_ssaaction_copy = None
         for action in sorted(bes_actions.iterkeys()):
+
+            if bes_actions[action].get('ActionName', None) == bes_ssaaction:
+                bes_ssaaction_copy = bes_actions[action]
+
             if bes_actions[action].get('ActionName', None) == 'DefaultAction':
                 node.append(self.new_action(bes_actions[action]))
                 bes_actions.pop(action, None)
@@ -427,6 +449,16 @@ class AutoPkgBESEngine(Processor):
         # Append Actions
         for action in sorted(bes_actions.iterkeys()):
             node.append(self.new_action(bes_actions[action]))
+
+        # Append SSA Action
+        if bes_ssaaction and bes_ssaaction_copy:
+                bes_ssaaction_copy['Description'] = ['Action10 - ',
+                                                     'Make available in ',
+                                                     'Self Service']
+                bes_ssaaction_copy['ActionNumber'] = 'Action10'
+                bes_ssaaction_copy['ActionName'] = 'Action'
+
+                node.append(self.new_action(bes_ssaaction_copy, ssa=True))
 
         # Write Final BES File to Disk
         bes_file = "%s/Deploy %s %s.bes" % (self.env.get("RECIPE_CACHE_DIR"),
