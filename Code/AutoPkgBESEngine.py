@@ -263,6 +263,10 @@ class AutoPkgBESEngine(Processor):
         if ssa:
             settings = OrderedDict((('ActionUITitle', self.env.get('NAME')),
                                    ('HasEndTime', 'false'),
+                                   ('Reapply', 'true'),
+                                   ('HasReapplyLimit', 'true'),
+                                   ('ReapplyLimit', '5'),
+                                   ('HasReapplyInterval', 'false'),
                                    ('IsOffer', 'true'),
                                    ('OfferCategory', self.env.get('OfferCategory', '')),
                                    ('OfferDescriptionHTML', self.env.get('OfferDescriptionHTML', '')),
