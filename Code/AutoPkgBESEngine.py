@@ -27,7 +27,7 @@ from autopkglib import Processor, ProcessorError, get_autopkg_version
 
 
 __all__ = ["AutoPkgBESEngine"]
-__version__ = '1.4'
+__version__ = '1.5'
 
 QNA = '/usr/local/bin/QnA'
 
@@ -261,7 +261,8 @@ class AutoPkgBESEngine(Processor):
                           {'Option': action_dict['SuccessCriteria']}))
 
         if ssa:
-            settings = OrderedDict((('ActionUITitle', self.env.get('NAME')),
+            ssatitle = self.env.get('SSATitle', self.env.get('NAME'))
+            settings = OrderedDict((('ActionUITitle', ssatitle),
                                    ('HasEndTime', 'false'),
                                    ('Reapply', 'true'),
                                    ('HasReapplyLimit', 'true'),
