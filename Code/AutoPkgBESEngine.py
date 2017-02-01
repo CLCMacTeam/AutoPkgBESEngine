@@ -314,6 +314,9 @@ class AutoPkgBESEngine(Processor):
                 self.env.get("bes_overrideurl",
                              self.env.get("url")))
         
+        # Get name of script for Source
+        fileBaseName = str(os.path.basename(__file__))
+        
         user = getpass.getuser()
         # If we don't have a file, don't get a size
         if skipPrefetch == True:
@@ -385,7 +388,7 @@ class AutoPkgBESEngine(Processor):
         details = OrderedDict((
             ('Category', bes_category),
             ('DownloadSize', str(bes_size)),
-            ('Source', "%s v%s (%s)" % (os.path.basename(__file__),
+            ('Source', "%s v%s (%s)" % (fileBaseName,
                                         __version__, str(get_autopkg_version()))),
             ('SourceID', user),
             ('SourceReleaseDate', str(datetime.datetime.now())[:10]),
@@ -442,7 +445,7 @@ class AutoPkgBESEngine(Processor):
 
         # Append MIME Source Data
         node.append(self.new_mime('x-fixlet-source',
-                                  os.path.basename(__file__)))
+                                  fileBaseName))
 
         # Add Additional MIME Fields
         if bes_additionalmimefields:
