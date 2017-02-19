@@ -16,6 +16,7 @@ Installation
 ***Python Requirements***
 
 - lxml
+- requests
 - [besapi](https://github.com/CLCMacTeam/besapi)
 
 ***The easy way...***
