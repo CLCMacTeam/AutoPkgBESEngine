@@ -27,7 +27,7 @@ from autopkglib import Processor, ProcessorError, get_autopkg_version
 
 
 __all__ = ["AutoPkgBESEngine"]
-__version__ = '1.5'
+__version__ = '1.6'
 
 QNA = '/usr/local/bin/QnA'
 
@@ -305,14 +305,25 @@ class AutoPkgBESEngine(Processor):
         """
         Create a BES software distribution task.
         """
-
-        # Assign Application Variables
-        url = self.get_direct_url(
-            self.env.get("bes_overrideurl",
-                         self.env.get("url")))
-
+        # Check for URL, set to skip 
+        if (self.env.get("bes_overrideurl") == None) and (self.env.get("url") == None):
+            skipPrefetch = True
+        else:        
+            # Assign Application Variables
+            url = self.get_direct_url(
+                self.env.get("bes_overrideurl",
+                             self.env.get("url")))
+        
+        # Get name of script for Source
+        fileBaseName = str(os.path.basename(__file__))
+        
         user = getpass.getuser()
-        bes_size = self.get_size()
+        # If we don't have a file, don't get a size
+        if skipPrefetch == True:
+            bes_size = 0
+        else:
+            bes_size = self.get_size()
+            
         gmtime_now = strftime("%a, %d %b %Y %X +0000", gmtime())
 
         bes_displayname = self.env.get("NAME")
@@ -327,13 +338,14 @@ class AutoPkgBESEngine(Processor):
 
         bes_relevance = self.env.get("bes_relevance")
 
-        bes_filename = self.env.get("bes_filename", url.split('/')[-1])
-        bes_filename = bes_filename.strip().replace(' ', '_')
+        if skipPrefetch != True:
+            bes_filename = self.env.get("bes_filename", url.split('/')[-1])
+            bes_filename = bes_filename.strip().replace(' ', '_')
 
-        bes_prefetch = self.env.get("bes_prefetch",
-                                    self.get_prefetch(None,
-                                                      bes_filename,
-                                                      url))
+            bes_prefetch = self.env.get("bes_prefetch",
+                                        self.get_prefetch(None,
+                                                          bes_filename,
+                                                          url))
 
         bes_description = self.env.get("bes_description",
                                        'This task will deploy %s %s.<BR><BR>'
@@ -356,21 +368,27 @@ class AutoPkgBESEngine(Processor):
 
         # Prepend prefetch line to action script for all actions
         # Prepend and append pre and post actionscript additions
-        for action in bes_actions:
-            bes_actions[action]['ActionScript'] = ("%s\n%s%s\n%s" % (
-                bes_preactionscript,
-                bes_prefetch,
-                bes_actions[action]['ActionScript'],
-                bes_postactionscript
-            )).strip()
+        if skipPrefetch == True:
+            for action in bes_actions:
+                bes_actions[action]['ActionScript'] = ("%s\n%s\n%s" % (
+                    bes_preactionscript,
+                    bes_actions[action]['ActionScript'],
+                    bes_postactionscript
+                )).strip()
+        else:
+            for action in bes_actions:
+                bes_actions[action]['ActionScript'] = ("%s\n%s%s\n%s" % (
+                    bes_preactionscript,
+                    bes_prefetch,
+                    bes_actions[action]['ActionScript'],
+                    bes_postactionscript
+                )).strip()
 
         # Additional Metadata for Task
         details = OrderedDict((
             ('Category', bes_category),
-            ('DownloadSize',
-             str(os.path.getsize(self.env.get(
-                 "bes_softwareinstaller", self.env.get("pathname"))))),
-            ('Source', "%s v%s (%s)" % (os.path.basename(__file__),
+            ('DownloadSize', str(bes_size)),
+            ('Source', "%s v%s (%s)" % (fileBaseName,
                                         __version__, str(get_autopkg_version()))),
             ('SourceID', user),
             ('SourceReleaseDate', str(datetime.datetime.now())[:10]),
@@ -427,7 +445,7 @@ class AutoPkgBESEngine(Processor):
 
         # Append MIME Source Data
         node.append(self.new_mime('x-fixlet-source',
-                                  os.path.basename(__file__)))
+                                  fileBaseName))
 
         # Add Additional MIME Fields
         if bes_additionalmimefields:
