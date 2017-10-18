@@ -323,7 +323,7 @@ class AutoPkgBESEngine(Processor):
         user = getpass.getuser()
         # If we don't have a file, don't get a size
         if skipPrefetch == True:
-            bes_size = 0
+            bes_size = self.env.get("filesize", 0)
         else:
             bes_size = self.get_size()
             
