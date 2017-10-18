@@ -305,6 +305,9 @@ class AutoPkgBESEngine(Processor):
         """
         Create a BES software distribution task.
         """
+        
+        skipPrefetch = False
+        
         # Check for URL, set to skip 
         if (self.env.get("bes_overrideurl") == None) and (self.env.get("url") == None):
             skipPrefetch = True
