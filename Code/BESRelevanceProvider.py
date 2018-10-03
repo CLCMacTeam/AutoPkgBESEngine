@@ -45,6 +45,10 @@ class BESRelevanceProvider(Processor):
             "description":
                 "The resulting file sha1 of the %bes_filepath%."
         },
+        "bes_sha256": {
+            "description":
+                "The resulting file sha256 of the %bes_filepath%."
+        },
         "bes_sha1_short": {
             "description":
                 "The short end of %bes_sha1% to be used as a display version."
@@ -88,11 +92,14 @@ class BESRelevanceProvider(Processor):
 
             self.env['bes_sha1'] = hashlib.sha1(file(
                 bes_filepath).read()).hexdigest()
+            self.env['bes_sha256'] = hashlib.sha256(file(
+                bes_filepath).read()).hexdigest()
             self.env['bes_size'] = str(os.path.getsize(bes_filepath))
             self.env['bes_sha1_short'] = str(self.env.get("bes_sha1"))[-5:]
 
-        self.output("bes_sha1 = %s, bes_size = %s, bes_sha1_short = %s" %
+        self.output("bes_sha1 = %s, bes_sha256 = %s, bes_size = %s, bes_sha1_short = %s" %
                     (self.env.get("bes_sha1"),
+                     self.env.get("bes_sha256"),
                      self.env.get("bes_size"),
                      self.env.get("bes_sha1_short")))
 
