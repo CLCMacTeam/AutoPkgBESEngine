@@ -11,7 +11,7 @@ Created by Matt Hansen (mah60@psu.edu) on 2013-11-06.
 AutoPkg Processor for uploading files using the BigFix REST API
 """
 
-import os
+import os, ssl
 import urllib2
 import base64
 import sys
@@ -45,6 +45,11 @@ class BESUploader(Processor):
             "description":
                 "BES console password for bes_username."
         },
+        "bes_filename": {
+            "required": False,
+            "description":
+                "Filename to use in prefetch statement. Defaults to /$sha1/$filename"
+        },
     }
     output_variables = {
         "bes_uploadname": {
@@ -59,6 +64,10 @@ class BESUploader(Processor):
             "description":
                 "The resulting sha1 of the BES console upload."
         },
+        "bes_uploadsha256": {
+            "description":
+                "The resulting sha256 of the BES console upload."
+        },
         "bes_uploadsize": {
             "description":
                 "The resulting size of the BES console upload."
@@ -72,6 +81,7 @@ class BESUploader(Processor):
 
     def send_api_request(self, api_url, auth_string, bes_file=None):
         """Send generic BES API request"""
+        # self.output("Sending BES API Request")
         request = urllib2.Request(api_url)
 
         request.add_header("Authorization", "Basic %s" % auth_string)
@@ -87,7 +97,11 @@ class BESUploader(Processor):
 
         # Request POST to Console API
         try:
+            # self.output(request.get_full_url())
+            # self.output(request.get_method())
+            # self.output(request)
             return urllib2.urlopen(request)
+
 
         except urllib2.HTTPError, error:
             self.output("HTTPError: [%s] %s" % (error.code, error.read()))
@@ -98,6 +112,12 @@ class BESUploader(Processor):
 
     def main(self):
         """BESUploader Main Method"""
+        
+        # Disable ssl warnings
+        if (not os.environ.get('PYTHONHTTPSVERIFY', '') and
+            getattr(ssl, '_create_unverified_context', None)): 
+            ssl._create_default_https_context = ssl._create_unverified_context
+            
         # Assign Console Variables
         bes_uploadpath = self.env.get("bes_uploadpath")
         BES_ROOTSERVER = self.env.get("BES_ROOTSERVER").encode('ascii')
@@ -105,13 +125,13 @@ class BESUploader(Processor):
         BES_PASSWORD = self.env.get("BES_PASSWORD")
 
         self.output("Uploading: %s to %s" % (bes_uploadpath,
-                                             BES_ROOTSERVER + '/upload'))
+                                             BES_ROOTSERVER + '/api/upload'))
 
         # Console Connection Strings
         auth_string = base64.encodestring('%s:%s' %
                                           (BES_USERNAME, BES_PASSWORD)).strip()
         # Send Request
-        upload_request = self.send_api_request(BES_ROOTSERVER + "/upload",
+        upload_request = self.send_api_request(BES_ROOTSERVER + "/api/upload",
                                                auth_string, bes_uploadpath)
 
         #Read and Parse Console Return
@@ -121,19 +141,26 @@ class BESUploader(Processor):
         result_url = result_upload[-1].getElementsByTagName('URL')
         result_size = result_upload[-1].getElementsByTagName('Size')
         result_sha1 = result_upload[-1].getElementsByTagName('SHA1')
-
+        result_sha256 = result_upload[-1].getElementsByTagName('SHA256')
+        # print entire output
+        # self.output(result_dom.toxml())
         # Set Output Variables
+        # Use bes_filename input or the name result_name
+        bes_filename = self.env.get("bes_filename", result_name[-1].firstChild.nodeValue)
+        
         self.env['bes_uploadname'] = result_name[-1].firstChild.nodeValue
         self.env['bes_uploadurl'] = result_url[-1].firstChild.nodeValue
         self.env['bes_uploadsize'] = result_size[-1].firstChild.nodeValue
         self.env['bes_uploadsha1'] = result_sha1[-1].firstChild.nodeValue
+        self.env['bes_uploadsha256'] = result_sha256[-1].firstChild.nodeValue
 
         self.env['bes_prefetch'] = (
-            "prefetch %s sha1:%s size:%s %s" % (
-                self.env.get("bes_uploadname"),
+            "prefetch %s sha1:%s size:%s %s %s" % (
+                bes_filename,
                 self.env.get("bes_uploadsha1"),
                 self.env.get("bes_uploadsize"),
                 self.env.get("bes_uploadurl"),
+                self.env.get("bes_uploadsha256"),
             )
         )
 
