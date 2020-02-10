@@ -27,7 +27,7 @@ from autopkglib import Processor, ProcessorError, get_autopkg_version
 
 
 __all__ = ["AutoPkgBESEngine"]
-__version__ = '1.6'
+__version__ = '1.7'
 
 QNA = '/usr/local/bin/QnA'
 
@@ -82,7 +82,7 @@ class AutoPkgBESEngine(Processor):
         "bes_relevance": {
             "required": True,
             "description":
-                "Appliation category, defaults to 'Software Deployment'"
+                "Relevance for task/fixlet"
         },
         "bes_actions": {
             "required": True,
@@ -103,6 +103,11 @@ class AutoPkgBESEngine(Processor):
             "required": False,
             "description":
                 "A dictionary of additional MIME fields to add to the task."
+        },
+        "skip_prefetch": {
+            "required": False,
+            "description":
+                "The AutoPkgBesEngine will skip any prefetch attempts for a non-payload task."
         }
     }
     output_variables = {
@@ -309,9 +314,9 @@ class AutoPkgBESEngine(Processor):
         skipPrefetch = False
         
         # Check for URL, set to skip 
-        if (self.env.get("bes_overrideurl") == None) and (self.env.get("url") == None):
+        if ((self.env.get("bes_overrideurl") == None) and (self.env.get("url") == None)) or (self.env.get("skip_prefetch") == "True"):
             skipPrefetch = True
-        else:        
+        else:
             # Assign Application Variables
             url = self.get_direct_url(
                 self.env.get("bes_overrideurl",
@@ -340,7 +345,7 @@ class AutoPkgBESEngine(Processor):
         bes_category = self.env.get("bes_category", 'Software Deployment')
 
         bes_relevance = self.env.get("bes_relevance")
-
+                
         if skipPrefetch != True:
             bes_filename = self.env.get("bes_filename", url.split('/')[-1])
             bes_filename = bes_filename.strip().replace(' ', '_')
