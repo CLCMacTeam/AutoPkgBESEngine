@@ -50,6 +50,11 @@ class BESUploader(Processor):
             "description":
                 "Filename to use in prefetch statement. Defaults to /$sha1/$filename"
         },
+        "output_var_name": {
+            "required": False,
+            "description":
+                "Output variable name. Defaults to 'bes_prefetch'"
+        }
     }
     output_variables = {
         "bes_uploadname": {
@@ -155,6 +160,19 @@ class BESUploader(Processor):
         self.env['bes_uploadsha256'] = result_sha256[-1].firstChild.nodeValue
 
         self.env['bes_prefetch'] = (
+            "prefetch %s sha1:%s size:%s %s sha256:%s" % (
+                bes_filename,
+                self.env.get("bes_uploadsha1"),
+                self.env.get("bes_uploadsize"),
+                self.env.get("bes_uploadurl"),
+                self.env.get("bes_uploadsha256"),
+            )
+        )
+        
+        output_var_name = self.env.get("output_var_name", 
+                                       "bes_prefetch")
+
+        self.env[output_var_name] = (
             "prefetch %s sha1:%s size:%s %s %s" % (
                 bes_filename,
                 self.env.get("bes_uploadsha1"),
@@ -163,10 +181,10 @@ class BESUploader(Processor):
                 self.env.get("bes_uploadsha256"),
             )
         )
-
-        self.output("Result (%s): %s    " % (
-            upload_request.getcode(),
-            result_upload[-1].attributes['Resource'].value))
+        
+        self.output("%s = %s" %
+                    (output_var_name,
+                     self.env.get(output_var_name)))
 
 if __name__ == "__main__":
     processor = BESUploader()
