@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/local/autopkg/python
 # encoding: utf-8
 #
 # Copyright 2013 The Pennsylvania State University.
@@ -9,10 +9,15 @@ BESUploader.py
 Created by Matt Hansen (mah60@psu.edu) on 2013-11-06.
 
 AutoPkg Processor for uploading files using the BigFix REST API
+
+Updated by Rusty Myers (rzm102@psu.edu) on 2020-02-21.
+
+Adding support for python3
+
 """
 
 import os, ssl
-import urllib2
+import urllib
 import base64
 import sys
 from xml.dom import minidom
@@ -87,7 +92,7 @@ class BESUploader(Processor):
     def send_api_request(self, api_url, auth_string, bes_file=None):
         """Send generic BES API request"""
         # self.output("Sending BES API Request")
-        request = urllib2.Request(api_url)
+        request = urllib.request(api_url)
 
         request.add_header("Authorization", "Basic %s" % auth_string)
         request.add_header("Content-Type", "application/xml")
@@ -105,13 +110,13 @@ class BESUploader(Processor):
             # self.output(request.get_full_url())
             # self.output(request.get_method())
             # self.output(request)
-            return urllib2.urlopen(request)
+            return urllib.urlopen(request)
 
 
-        except urllib2.HTTPError, error:
+        except urllib.error.HTTPError as error:
             self.output("HTTPError: [%s] %s" % (error.code, error.read()))
             sys.exit(1)
-        except urllib2.URLError, error:
+        except urllib.error.URLError as error:
             self.output("URLError: %s" % (error.args))
             sys.exit(1)
 

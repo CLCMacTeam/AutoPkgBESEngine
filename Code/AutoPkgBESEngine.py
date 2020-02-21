@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/local/autopkg/python
 #
 # Copyright 2013 The Pennsylvania State University.
 #
@@ -8,6 +8,10 @@ AutoPkgBESEngine.py
 Created by Matt Hansen (mah60@psu.edu) on 2013-10-08.
 
 AutoPkg Processor for BES (BigFix) XML Tasks and Fixlets
+
+Updated by Rusty Myers (rzm102@psu.edu) on 2020-02-21.
+
+Adding support for python3
 """
 import os
 import base64
@@ -302,7 +306,7 @@ class AutoPkgBESEngine(Processor):
                             (relevance,
                              output.get('E')))
             return True
-        except Exception, error:
+        except Exception as error:
             self.output("Relevance Error: (%s) -- %s" % (QNA, error))
             return True
 
