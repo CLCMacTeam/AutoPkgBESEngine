@@ -42,7 +42,7 @@ class BESImporter(Processor):
             "description":
                 "Task ID to import (overwrite), performs HTTP PUT."
         },
-        "BES_ROOTSERVER": {
+        "BES_ROOT_SERVER": {
             "required": True,
             "description":
                 "URL to BES root server. e.g https://bes.domain.tld:52311/api"
@@ -80,12 +80,12 @@ class BESImporter(Processor):
 
         BES_USERNAME = self.env.get("BES_USERNAME")
         BES_PASSWORD = self.env.get("BES_PASSWORD")
-        BES_ROOTSERVER = self.env.get("BES_ROOTSERVER")
+        BES_ROOT_SERVER = self.env.get("BES_ROOT_SERVER")
 
         # BES Console Connection
         B = besapi.BESConnection(BES_USERNAME,
                                  BES_PASSWORD,
-                                 BES_ROOTSERVER,
+                                 BES_ROOT_SERVER,
                                  verify=False)
 
         # PUT, update task
@@ -100,7 +100,7 @@ class BESImporter(Processor):
                     bes_taskid, task().Task.Title))
 
                 self.output("Importing: '%s' to %s/tasks/custom/%s" %
-                            (bes_file, BES_ROOTSERVER, bes_customsite))
+                            (bes_file, BES_ROOT_SERVER, bes_customsite))
 
                 with open(bes_file, 'r') as file_handle:
                     upload_result = B.put('task/custom/%s/%s' % (bes_customsite,
@@ -146,7 +146,7 @@ class BESImporter(Processor):
 
             if not duplicate_task:
                 self.output("Importing: '%s' to %s/tasks/custom/%s" %
-                            (bes_file, BES_ROOTSERVER, bes_customsite))
+                            (bes_file, BES_ROOT_SERVER, bes_customsite))
 
                 # Upload task
                 with open(bes_file, 'r') as file_handle:
