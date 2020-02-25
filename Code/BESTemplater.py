@@ -14,7 +14,7 @@ Updated by Rusty Myers (rzm102@psu.edu) on 2020-02-21.
 
 Work in progress. Does not support Python3.
 """
-
+from __future__ import absolute_import
 import os
 import sys
 
