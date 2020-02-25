@@ -2,6 +2,7 @@ AutoPkg BESEngine
 =======
 
 ##Update for Python3 and AutoPkg 2.0
+
 AutoPkg 2.0 has started to ship with it's own install of python3, which means that installing modules for python system
 wide or into user spaces won't work as expected.
 The AutoPkgBESEngine requires the additon of the following modules to the AutoPkg Python Framework, as well as the besapi folder:
@@ -14,7 +15,7 @@ lxml (AutoPkgBESEngine.py)
 
 One option is to place the folders from the "modules" folder in the repo into the "/Library/AutoPkg/Python3/Python.framework/Versions/Current/lib/python3.7/site-packages/" folder.
 
-
+See [Installing Additional Modules](https://github.com/munki/munki/wiki/Customizing-Python-for-Munki-4#installing-additional-python-modules) from AutoPkg wiki for more information.
 
 -----------
 
