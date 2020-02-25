@@ -131,10 +131,18 @@ class AutoPkgBESEngine(Processor):
         Return a direct url for a download link and spoof the User-Agent.
         """
 
-        useragentsplist = ('/Applications/Safari.app'
-                           '/Contents/Resources/UserAgents.plist')
-
-        useragent = FoundationPlist.readPlist(useragentsplist)[0]['user-agent']
+        useragentsplist = ('/Applications/Safari.app/Contents/Resources/UserAgents.plist')
+        # Source: https://github.com/autopkg/autopkg/blob/34874d2f1f91dadfdafaaf5aba63f8231936657f/Code/autopkglib/PlistEditor.py
+        useragents = ""
+        if not useragentsplist:
+            return {}
+        try:
+            with open(useragentsplist, "rb") as f:
+                useragents = plistlib.load(f)
+        except Exception as err:
+            raise ProcessorError(f"Could not read user agent plist: {err}")
+            
+        useragent = useragents[0]['user-agent']
 
         headers = {'User-Agent' : useragent.encode('ascii')}
         request = requests.head(url, headers=headers)
