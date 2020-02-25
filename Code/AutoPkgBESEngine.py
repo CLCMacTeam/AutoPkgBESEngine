@@ -203,7 +203,7 @@ class AutoPkgBESEngine(Processor):
         #content_type = r.headers['Content-Type']
         content_type = "image/%s" % r.url.split('.')[-1]
 
-        return "data:%s;base64,%s" % (content_type, b64content)
+        return "data:%s;base64,%s" % (content_type, b64content.decode())
 
     def new_node(self, element_name, node_text="", element_attributes={}):
         """
