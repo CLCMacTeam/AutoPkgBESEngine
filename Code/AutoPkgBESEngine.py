@@ -318,7 +318,7 @@ class AutoPkgBESEngine(Processor):
                                     stdin=subprocess.PIPE,
                                     stdout=subprocess.PIPE,
                                     stderr=subprocess.PIPE)
-            out, err = proc.communicate(relevance)
+            out, err = proc.communicate(relevance.encode())
 
             output = {}
             for line in out.decode().strip().split('\n'):
@@ -326,8 +326,7 @@ class AutoPkgBESEngine(Processor):
 
             if output.get('E', None):
                 self.output("Relevance Error: {%s} -- %s" %
-                            (relevance,
-                             output.get('E')))
+                            (relevance, output.get('E')))
             return True
         except Exception as error:
             self.output("Relevance Error: (%s) -- %s" % (QNA, error))
@@ -484,7 +483,7 @@ class AutoPkgBESEngine(Processor):
 
         # Add Additional MIME Fields
         if bes_additionalmimefields:
-            for name, value in bes_additionalmimefields.iteritems():
+            for name, value in bes_additionalmimefields.items():
                 node.append(self.new_mime(name, value))
 
         # Add Modification Time
@@ -495,7 +494,7 @@ class AutoPkgBESEngine(Processor):
 
         # Append Default Action
         bes_ssaaction_copy = None
-        for action in sorted(bes_actions.iterkeys()):
+        for action in sorted(bes_actions.keys()):
 
             if bes_actions[action].get('ActionName', None) == bes_ssaaction:
                 bes_ssaaction_copy = bes_actions[action]
@@ -505,7 +504,7 @@ class AutoPkgBESEngine(Processor):
                 bes_actions.pop(action, None)
 
         # Append Actions
-        for action in sorted(bes_actions.iterkeys()):
+        for action in sorted(bes_actions.keys()):
             node.append(self.new_action(bes_actions[action]))
 
         # Append SSA Action
