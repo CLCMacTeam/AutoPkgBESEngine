@@ -26,7 +26,7 @@ from collections import OrderedDict
 
 import requests
 from lxml import etree
-from FoundationPlist import FoundationPlist
+import plistlib
 from autopkglib import Processor, ProcessorError, get_autopkg_version
 
 
@@ -161,17 +161,32 @@ class AutoPkgBESEngine(Processor):
         return "prefetch %s sha1:%s size:%d %s sha256:%s" % (file_name, sha1,
                                                              size, url, sha256)
 
-    def get_sha1(self, file_path=""):
-        if not file_path:
-            file_path = self.env.get("bes_softwareinstaller", self.env.get("pathname"))
+    def get_sha1(self, filename=""):
+        if not filename:
+            filename = self.env.get("bes_softwareinstaller", self.env.get("pathname"))
+        h  = hashlib.sha1()
+        with open(filename, 'rb') as file:
+            while True:
+                # Reading is buffered, so we can read smaller chunks.
+                chunk = file.read(h.block_size)
+                if not chunk:
+                    break
+                h.update(chunk)
+        return h.hexdigest()
 
-        return hashlib.sha1(file(file_path).read()).hexdigest()
-
-    def get_sha256(self, file_path=""):
-        if not file_path:
-            file_path = self.env.get("bes_softwareinstaller", self.env.get("pathname"))
-
-        return hashlib.sha256(file(file_path).read()).hexdigest()
+    #https://stackoverflow.com/questions/22058048/hashing-a-file-in-python
+    def get_sha256(self, filename=""):
+        if not filename:
+            filename = self.env.get("bes_softwareinstaller", self.env.get("pathname"))
+        h  = hashlib.sha256()
+        with open(filename, 'rb') as file:
+            while True:
+                # Reading is buffered, so we can read smaller chunks.
+                chunk = file.read(h.block_size)
+                if not chunk:
+                    break
+                h.update(chunk)
+        return h.hexdigest()
 
     def get_size(self, file_path=""):
         if not file_path:
@@ -306,7 +321,7 @@ class AutoPkgBESEngine(Processor):
             out, err = proc.communicate(relevance)
 
             output = {}
-            for line in out.strip().split('\n'):
+            for line in out.decode().strip().split('\n'):
                 output[line.split(':')[0].strip()] = line.split(':')[1].strip()
 
             if output.get('E', None):
@@ -359,7 +374,7 @@ class AutoPkgBESEngine(Processor):
         bes_relevance = self.env.get("bes_relevance")
                 
         if skipPrefetch != True:
-            bes_filename = self.env.get("bes_filename", url.split('/')[-1])
+            bes_filename = self.env.get("bes_filename", url.decode().split('/')[-1])
             bes_filename = bes_filename.strip().replace(' ', '_')
 
             bes_prefetch = self.env.get("bes_prefetch",
@@ -369,7 +384,7 @@ class AutoPkgBESEngine(Processor):
 
         bes_description = self.env.get("bes_description",
                                        'This task will deploy %s %s.<BR><BR>'
-                                       'This task is applicable on Mac OS X' %
+                                       'This task is applicable on macOS' %
                                        (bes_displayname, bes_version))
 
         bes_actions = self.env.get("bes_actions",
