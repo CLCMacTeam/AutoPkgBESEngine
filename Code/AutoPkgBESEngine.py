@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/local/autopkg/python
 #
 # Copyright 2013 The Pennsylvania State University.
 #
@@ -8,7 +8,13 @@ AutoPkgBESEngine.py
 Created by Matt Hansen (mah60@psu.edu) on 2013-10-08.
 
 AutoPkg Processor for BES (BigFix) XML Tasks and Fixlets
+
+Updated by Rusty Myers (rzm102@psu.edu) on 2020-02-21.
+
+Adding support for python3
 """
+from __future__ import absolute_import
+
 import os
 import base64
 import hashlib
@@ -22,7 +28,7 @@ from collections import OrderedDict
 
 import requests
 from lxml import etree
-from FoundationPlist import FoundationPlist
+import plistlib
 from autopkglib import Processor, ProcessorError, get_autopkg_version
 
 
@@ -127,10 +133,18 @@ class AutoPkgBESEngine(Processor):
         Return a direct url for a download link and spoof the User-Agent.
         """
 
-        useragentsplist = ('/Applications/Safari.app'
-                           '/Contents/Resources/UserAgents.plist')
-
-        useragent = FoundationPlist.readPlist(useragentsplist)[0]['user-agent']
+        useragentsplist = ('/Applications/Safari.app/Contents/Resources/UserAgents.plist')
+        # Source: https://github.com/autopkg/autopkg/blob/34874d2f1f91dadfdafaaf5aba63f8231936657f/Code/autopkglib/PlistEditor.py
+        useragents = ""
+        if not useragentsplist:
+            return {}
+        try:
+            with open(useragentsplist, "rb") as f:
+                useragents = plistlib.load(f)
+        except Exception as err:
+            raise ProcessorError("Could not read user agent plist: {err}")
+            
+        useragent = useragents[0]['user-agent']
 
         headers = {'User-Agent' : useragent.encode('ascii')}
         request = requests.head(url, headers=headers)
@@ -147,19 +161,34 @@ class AutoPkgBESEngine(Processor):
         size = self.get_size(file_path)
 
         return "prefetch %s sha1:%s size:%d %s sha256:%s" % (file_name, sha1,
-                                                             size, url, sha256)
+                                                             size, url.decode(), sha256)
 
-    def get_sha1(self, file_path=""):
-        if not file_path:
-            file_path = self.env.get("bes_softwareinstaller", self.env.get("pathname"))
+    def get_sha1(self, filename=""):
+        if not filename:
+            filename = self.env.get("bes_softwareinstaller", self.env.get("pathname"))
+        h  = hashlib.sha1()
+        with open(filename, 'rb') as file:
+            while True:
+                # Reading is buffered, so we can read smaller chunks.
+                chunk = file.read(h.block_size)
+                if not chunk:
+                    break
+                h.update(chunk)
+        return h.hexdigest()
 
-        return hashlib.sha1(file(file_path).read()).hexdigest()
-
-    def get_sha256(self, file_path=""):
-        if not file_path:
-            file_path = self.env.get("bes_softwareinstaller", self.env.get("pathname"))
-
-        return hashlib.sha256(file(file_path).read()).hexdigest()
+    #https://stackoverflow.com/questions/22058048/hashing-a-file-in-python
+    def get_sha256(self, filename=""):
+        if not filename:
+            filename = self.env.get("bes_softwareinstaller", self.env.get("pathname"))
+        h  = hashlib.sha256()
+        with open(filename, 'rb') as file:
+            while True:
+                # Reading is buffered, so we can read smaller chunks.
+                chunk = file.read(h.block_size)
+                if not chunk:
+                    break
+                h.update(chunk)
+        return h.hexdigest()
 
     def get_size(self, file_path=""):
         if not file_path:
@@ -174,7 +203,7 @@ class AutoPkgBESEngine(Processor):
         #content_type = r.headers['Content-Type']
         content_type = "image/%s" % r.url.split('.')[-1]
 
-        return "data:%s;base64,%s" % (content_type, b64content)
+        return "data:%s;base64,%s" % (content_type, b64content.decode())
 
     def new_node(self, element_name, node_text="", element_attributes={}):
         """
@@ -291,18 +320,17 @@ class AutoPkgBESEngine(Processor):
                                     stdin=subprocess.PIPE,
                                     stdout=subprocess.PIPE,
                                     stderr=subprocess.PIPE)
-            out, err = proc.communicate(relevance)
+            out, err = proc.communicate(relevance.encode())
 
             output = {}
-            for line in out.strip().split('\n'):
+            for line in out.decode().strip().split('\n'):
                 output[line.split(':')[0].strip()] = line.split(':')[1].strip()
 
             if output.get('E', None):
                 self.output("Relevance Error: {%s} -- %s" %
-                            (relevance,
-                             output.get('E')))
+                            (relevance, output.get('E')))
             return True
-        except Exception, error:
+        except Exception as error:
             self.output("Relevance Error: (%s) -- %s" % (QNA, error))
             return True
 
@@ -347,7 +375,7 @@ class AutoPkgBESEngine(Processor):
         bes_relevance = self.env.get("bes_relevance")
                 
         if skipPrefetch != True:
-            bes_filename = self.env.get("bes_filename", url.split('/')[-1])
+            bes_filename = self.env.get("bes_filename", url.decode().split('/')[-1])
             bes_filename = bes_filename.strip().replace(' ', '_')
 
             bes_prefetch = self.env.get("bes_prefetch",
@@ -357,7 +385,7 @@ class AutoPkgBESEngine(Processor):
 
         bes_description = self.env.get("bes_description",
                                        'This task will deploy %s %s.<BR><BR>'
-                                       'This task is applicable on Mac OS X' %
+                                       'This task is applicable on macOS' %
                                        (bes_displayname, bes_version))
 
         bes_actions = self.env.get("bes_actions",
@@ -457,7 +485,7 @@ class AutoPkgBESEngine(Processor):
 
         # Add Additional MIME Fields
         if bes_additionalmimefields:
-            for name, value in bes_additionalmimefields.iteritems():
+            for name, value in bes_additionalmimefields.items():
                 node.append(self.new_mime(name, value))
 
         # Add Modification Time
@@ -468,7 +496,7 @@ class AutoPkgBESEngine(Processor):
 
         # Append Default Action
         bes_ssaaction_copy = None
-        for action in sorted(bes_actions.iterkeys()):
+        for action in sorted(bes_actions.keys()):
 
             if bes_actions[action].get('ActionName', None) == bes_ssaaction:
                 bes_ssaaction_copy = bes_actions[action]
@@ -478,7 +506,7 @@ class AutoPkgBESEngine(Processor):
                 bes_actions.pop(action, None)
 
         # Append Actions
-        for action in sorted(bes_actions.iterkeys()):
+        for action in sorted(bes_actions.keys()):
             node.append(self.new_action(bes_actions[action]))
 
         # Append SSA Action
