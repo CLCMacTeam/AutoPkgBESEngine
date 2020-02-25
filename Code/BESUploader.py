@@ -111,7 +111,7 @@ class BESUploader(Processor):
             # self.output(request.get_full_url())
             # self.output(request.get_method())
             # self.output(request)
-            return urllib.urlopen(request)
+            return urllib.request.urlopen(request)
 
 
         except urllib.error.HTTPError as error:
