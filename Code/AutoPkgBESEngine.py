@@ -33,7 +33,7 @@ from autopkglib import Processor, ProcessorError, get_autopkg_version
 
 
 __all__ = ["AutoPkgBESEngine"]
-__version__ = '1.7'
+__version__ = '2.0'
 
 QNA = '/usr/local/bin/QnA'
 
