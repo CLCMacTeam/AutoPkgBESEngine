@@ -161,7 +161,7 @@ class AutoPkgBESEngine(Processor):
         size = self.get_size(file_path)
 
         return "prefetch %s sha1:%s size:%d %s sha256:%s" % (file_name, sha1,
-                                                             size, url, sha256)
+                                                             size, url.decode(), sha256)
 
     def get_sha1(self, filename=""):
         if not filename:
