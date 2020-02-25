@@ -9,7 +9,12 @@ BESImporter.py
 Created by Matt Hansen (mah60@psu.edu) on 2013-11-04.
 
 AutoPkg Processor for importing tasks using the BigFix RESTAPI
+
+Updated by Rusty Myers (rzm102@psu.edu) on 2020-02-21.
+
+Adding support for python3
 """
+from __future__ import absolute_import
 
 import besapi
 

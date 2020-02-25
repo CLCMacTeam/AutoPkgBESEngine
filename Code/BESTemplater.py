@@ -9,6 +9,10 @@ BESTemplater.py
 Created by Matt Hansen (mah60@psu.edu) on 2015-04-30.
 
 AutoPkg Processor for importing tasks using the BigFix RESTAPI
+
+Updated by Rusty Myers (rzm102@psu.edu) on 2020-02-21.
+
+Work in progress. Does not support Python3.
 """
 
 import os

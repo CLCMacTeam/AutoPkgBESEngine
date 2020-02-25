@@ -11,6 +11,11 @@ requests (BESImporter.py)
  -> chardet (requests)
  -> idna (requests)
 lxml (AutoPkgBESEngine.py)
+
+One option is to place the folders from the "modules" folder in the repo into the "/Library/AutoPkg/Python3/Python.framework/Versions/Current/lib/python3.7/site-packages/" folder.
+
+
+
 -----------
 
 AutoPkgBESEngine is a collection of shared processors for [AutoPkg](https://github.com/autopkg/autopkg) used to automatically create and import software deployment tasks into a [IBM Endpoint Manager](http://www.ibm.com/software/tivoli/solutions/endpoint-manager/) console.

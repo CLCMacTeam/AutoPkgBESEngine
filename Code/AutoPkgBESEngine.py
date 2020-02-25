@@ -13,6 +13,8 @@ Updated by Rusty Myers (rzm102@psu.edu) on 2020-02-21.
 
 Adding support for python3
 """
+from __future__ import absolute_import
+
 import os
 import base64
 import hashlib
@@ -140,7 +142,7 @@ class AutoPkgBESEngine(Processor):
             with open(useragentsplist, "rb") as f:
                 useragents = plistlib.load(f)
         except Exception as err:
-            raise ProcessorError(f"Could not read user agent plist: {err}")
+            raise ProcessorError("Could not read user agent plist: {err}")
             
         useragent = useragents[0]['user-agent']
 

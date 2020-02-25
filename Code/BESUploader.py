@@ -15,6 +15,7 @@ Updated by Rusty Myers (rzm102@psu.edu) on 2020-02-21.
 Adding support for python3
 
 """
+from __future__ import absolute_import
 
 import os, ssl
 import urllib
@@ -100,7 +101,7 @@ class BESUploader(Processor):
         # Read bes_file contents and add to request
         if bes_file:
             bes_data = open(bes_file).read()
-            request.add_data(bes_data)
+            request.data(bes_data)
             request.add_header("Content-Disposition",
                                'attachment; filename="%s"' %
                                os.path.basename(bes_file))
