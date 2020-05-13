@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Description</key>
+    <string>Creates .bes file for exe and uploads it to BigFix</string>
+    <key>Identifier</key>
+    <string>com.example.bigfix.Example-Win</string>
+    <key>Input</key>
+    <dict>
+        <key>NAME</key>
+        <string>An EXAMPLE</string>
+        <key>SHORTNAME</key>
+        <string>EXAMPLE</string>
+        <key>EXENAME</key>
+        <string>%SHORTNAME%-%version%.exe</string>
+        <key>bes_icon</key>
+        <string>http://bes.example.com:52311/SHARE/Icons/EXAMPLE.png</string>
+        <key>OfferCategory</key>
+        <string>EXAMPLE</string>
+        <key>OfferDescriptionHTML</key>
+        <string>EXAMPLE</string>
+        <key>bes_ssa</key>
+        <string>True</string>
+        <key>bes_ssaaction</key>
+        <string>DefaultAction</string>
+        <key>DESCRIPTION</key>
+        <string>This description shows up in the Action Description tab.</string>
+        <key>LICENSE</key>
+        <string>%NAME% is freeware.</string>
+    </dict>
+    <key>MinimumVersion</key>
+    <string>0.2.9</string>
+<!-- Uncomment this to point to a download recipe    <key>ParentRecipe</key>
+    <string>com.example.download.EXAMPLE</string>-->
+    <key>Process</key>
+    <array>
+        <dict>
+            <key>Processor</key>
+            <string>EndOfCheckPhase</string>
+        </dict>
+<!--        <dict>
+            <key>Processor</key>
+            <string>Copier</string>
+            <key>Arguments</key>
+            <dict>
+                <key>source_path</key>
+                <string>%pathname%</string>
+                <key>destination_path</key>
+                <string>/Volumes/SHARE/%SHORTNAME%/</string>
+            </dict>
+        </dict>-->
+        <dict>
+            <key>Arguments</key>
+            <dict>
+                <!--Comment Out bes_overrideurl to create task without payload-->
+                <key>bes_overrideurl</key>
+                <string>http://bes.example.com:52311/SHARE/%SHORTNAME%/%EXENAME%</string>
+                <key>bes_filename</key>
+                <string>%SHORTNAME%.exe</string>
+                <!-- Enable to get prefetch from different file
+                <key>bes_softwareinstaller</key>
+                <string>%SHORTNAME%.exe</string>-->
+                <key>bes_version</key>
+                <string>%version%</string>
+                <key>bes_title</key>
+                <string>Install/Upgrade: %NAME% %version% - Windows</string>
+                <key>bes_description</key>
+                <string><![CDATA[<FONT size=3><STRONG>About</STRONG> %NAME%</FONT>
+<BLOCKQUOTE>%DESCRIPTION%</BLOCKQUOTE>
+<P><FONT color=#0080ff size=3><STRONG>Licensing</STRONG></FONT></P>
+<BLOCKQUOTE style="MARGIN-RIGHT: 0px" dir=ltr><P>%LICENSE%</P></BLOCKQUOTE>
+<STRONG><P><FONT size=3>About This Task</FONT></P></STRONG>
+<BLOCKQUOTE>This task will install/upgrade: %NAME%.<BR><BR>This task is applicable on: Windows. </BLOCKQUOTE>
+<P><FONT size=3><STRONG>Action Description</STRONG></FONT></P>
+<UL><LI><FONT size=2><STRONG>Action1: Install/upgrade and disable auto-updates.</STRONG></FONT></LI></UL>
+<BLOCKQUOTE style="MARGIN-RIGHT: 0px" dir=ltr>
+<P><FONT size=2>This action installs %NAME%.</FONT></P></BLOCKQUOTE>
+<UL><LI><FONT size=2><STRONG>Action2: Install/upgrade.</STRONG></FONT></LI></UL>
+<BLOCKQUOTE style="MARGIN-RIGHT: 0px" dir=ltr>
+<P><FONT size=2>This action installs %NAME%.</FONT></P></BLOCKQUOTE>
+<UL><LI><FONT size=2><STRONG>Action10: Make available in Self Service.</STRONG></FONT></LI></UL>
+<BLOCKQUOTE style="MARGIN-RIGHT: 0px" dir=ltr>
+<P><FONT size=2>This action performs the same action as Action1 with Self Service deployment options set.</FONT></P></BLOCKQUOTE>]]></string>
+                <key>bes_category</key>
+                <string>%OfferCategory%</string>
+                <key>bes_relevance</key>
+                <array>
+                    <string>windows of operating system</string>
+                    <string>not member of group 47448 /*CLM Division*/ of sites</string>
+                    <string>not exists key whose (value "DisplayName" of it as string contains "%NAME%" AND (it &gt;= "%version%" as version) of (value "DisplayVersion" of it as string as version)) of key "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" of registry</string>
+                </array>
+                <key>bes_actions</key>
+                <dict>
+                    <key>1</key>
+                    <dict>
+                        <key>Description</key>
+                        <array>
+                            <string></string>
+                            <string>Install/Upgrade</string>
+                            <string>.</string>
+                        </array>
+                        <key>ActionName</key>
+                        <string>DefaultAction</string>
+                        <key>ActionNumber</key>
+                        <string>Action1</string>
+                        <key>ActionScript</key>
+                        <string>
+// Install exe
+wait __Download\%bes_filename% /S
+
+</string>
+                   </dict>
+                    <key>2</key>
+                    <dict>
+                        <key>Description</key>
+                        <array>
+                            <string></string>
+                            <string>Install/Upgrade</string>
+                            <string>.</string>
+                        </array>
+                        <key>ActionName</key>
+                        <string>Action</string>
+                        <key>ActionNumber</key>
+                        <string>Action2</string>
+                        <key>ActionScript</key>
+                        <string>
+
+// Install exe
+wait __Download\%bes_filename% /S
+
+</string>
+                    </dict>
+               </dict>
+            </dict>
+            <key>Processor</key>
+            <string>AutoPkgBESEngine</string>
+        </dict>
+        <dict>
+            <key>Processor</key>
+            <string>BESImporter</string>
+            <key>Arguments</key>
+            <dict>
+                <key>bes_file</key>
+                <string>%bes_file%</string>
+                <key>bes_customsite</key>
+                <string>CustomSiteName</string>
+            </dict>
+        </dict>
+    </array>
+</dict>
+</plist>

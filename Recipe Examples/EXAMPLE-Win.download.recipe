@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Description</key>
+    <string>This recipe downloads EXAMPLE</string>
+    <key>Identifier</key>
+    <string>com.example.download.EXAMPLE-Win</string>
+    <key>Input</key>
+    <dict>
+        <key>NAME</key>
+        <string></string>
+        <key>SEARCH_URL</key>
+        <string></string>
+        <key>SEARCH_PATTERN</key>
+        <string></string>
+        <key>USER_AGENT</key>
+        <string>Mozilla/5.0 (Windows NT 6.3; Win64, x64; Trident/7.0; rv:11.0) like Gecko</string>
+    </dict>
+    <key>MinimumVersion</key>
+    <string>0.2.9</string>
+    <key>Process</key>
+    <array>
+        <dict>
+            <key>Processor</key>
+            <string>URLTextSearcher</string>
+            <key>Arguments</key>
+            <dict>
+                <key>url</key>
+                <string>%SEARCH_URL%</string>
+                <key>re_pattern</key>
+                <string>%SEARCH_PATTERN%</string>
+            </dict>
+        </dict>
+        <dict>
+            <key>Processor</key>
+            <string>URLDownloader</string>
+            <key>Arguments</key>
+            <dict>
+                <key>url</key>
+                <string>%match%</string>
+                 <key>request_headers</key>
+                    <dict>
+                            <key>user-agent</key>
+                            <string>%USER_AGENT%</string>
+                    </dict>
+            </dict>
+        </dict>
+        <!-- Versioning simple exe
+        <dict>
+            <key>Processor</key>
+            <string>com.github.hansen-m.SharedProcessors/HachoirMetaDataProvider</string>
+        </dict>-->
+        <!-- Versioning simple msi
+        <dict>
+            <key>Processor</key>
+            <string>com.github.hansen-m.SharedProcessors/MSIInfoVersionProvider</string>
+            <key>Arguments</key>
+            <dict>
+                <key>msi_path</key>
+                <string>%pathname%</string>
+            </dict>
+        </dict>-->
+        <dict>
+            <key>Processor</key>
+            <string>EndOfCheckPhase</string>
+        </dict>
+    </array>
+</dict>
+</plist>
