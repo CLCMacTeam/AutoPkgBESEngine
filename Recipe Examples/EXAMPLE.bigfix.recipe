@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Description</key>
+    <string>Creates .bes file for exe and uploads it to BigFix</string>
+    <key>Identifier</key>
+    <string>com.example.bigfix.Example</string>
+    <key>Input</key>
+    <dict>
+        <key>NAME</key>
+        <string>An EXAMPLE</string>
+        <key>SHORTNAME</key>
+        <string>EXAMPLE</string>
+        <key>bes_icon</key>
+        <string>http://bes.example.com:52311/SHARE/Icons/EXAMPLE.png</string>
+        <key>OfferCategory</key>
+        <string>EXAMPLE</string>
+        <key>OfferDescriptionHTML</key>
+        <string><![CDATA[EXAMPLE]]></string>
+        <key>bes_ssa</key>
+        <string>True</string>
+        <key>bes_ssaaction</key>
+        <string>DefaultAction</string>
+        <key>DESCRIPTION</key>
+        <string>This description shows up in the Action Description tab.</string>
+        <key>LICENSE</key>
+        <string>%NAME% is freeware.</string>
+    </dict>
+    <key>MinimumVersion</key>
+    <string>0.2.9</string>
+<!-- Uncomment this to point to a download recipe    
+    <key>ParentRecipe</key>
+    <string>com.example.download.EXAMPLE</string>-->
+    <key>Process</key>
+    <array>
+        <dict>
+            <key>Processor</key>
+            <string>EndOfCheckPhase</string>
+        </dict>
+<!--        <dict>
+            <key>Processor</key>
+            <string>Copier</string>
+            <key>Arguments</key>
+            <dict>
+                <key>source_path</key>
+                <string>%pathname%</string>
+                <key>destination_path</key>
+                <string>/Volumes/SHARE/%SHORTNAME%/</string>
+            </dict>
+        </dict>-->
+        <dict>
+            <key>Arguments</key>
+            <dict>
+                <!--Comment Out bes_overrideurl to create task without payload-->
+                <key>bes_overrideurl</key>
+                <string>http://bes.example.com:52311/SHARE/%SHORTNAME%/%EXENAME%</string>
+                <key>bes_filename</key>
+                <string>%SHORTNAME%.pkg</string>
+                <!-- Enable to get prefetch from different file
+                <key>bes_softwareinstaller</key>
+                <string>%SHORTNAME%.pkg</string>-->
+                <!-- Skip calculating and adding a prefetch into the action script
+                <key>skip_prefetch</key>
+                <string>True</string> -->
+                <key>bes_version</key>
+                <string>%version%</string>
+                <key>bes_title</key>
+                <string>Install/Upgrade: %NAME% %version% - macOS</string>
+                <key>bes_description</key>
+                <string><![CDATA[<FONT size=3><STRONG>About</STRONG> %NAME%</FONT>
+<BLOCKQUOTE>%DESCRIPTION%</BLOCKQUOTE>
+<P><FONT color=#0080ff size=3><STRONG>Licensing</STRONG></FONT></P>
+<BLOCKQUOTE style="MARGIN-RIGHT: 0px" dir=ltr><P>%LICENSE%</P></BLOCKQUOTE>
+<STRONG><P><FONT size=3>About This Task</FONT></P></STRONG>
+<BLOCKQUOTE>This task will install/upgrade: %NAME%.<BR><BR>This task is applicable on: macOS 10.13.x. </BLOCKQUOTE>
+<P><FONT size=3><STRONG>Action Description</STRONG></FONT></P>
+<UL><LI><FONT size=2><STRONG>Action1: Install/upgrade and disable auto-updates.</STRONG></FONT></LI></UL>
+<BLOCKQUOTE style="MARGIN-RIGHT: 0px" dir=ltr>
+<P><FONT size=2>This action installs %NAME%.</FONT></P></BLOCKQUOTE>
+<UL><LI><FONT size=2><STRONG>Action2: Install/upgrade.</STRONG></FONT></LI></UL>
+<BLOCKQUOTE style="MARGIN-RIGHT: 0px" dir=ltr>
+<P><FONT size=2>This action installs %NAME%.</FONT></P></BLOCKQUOTE>
+<UL><LI><FONT size=2><STRONG>Action10: Make available in Self Service.</STRONG></FONT></LI></UL>
+<BLOCKQUOTE style="MARGIN-RIGHT: 0px" dir=ltr>
+<P><FONT size=2>This action performs the same action as Action1 with Self Service deployment options set.</FONT></P></BLOCKQUOTE>]]></string>
+                <key>bes_category</key>
+                <string>%OfferCategory%</string>
+                <key>bes_relevance</key>
+                <array>
+                    <string>mac of operating system</string>
+                    <string>system version &gt;= "10.5"</string>
+                    <string>not exists folder "/Applications/%NAME%.app" whose (version of it &gt;= "%version%" as version)</string>
+                </array>
+                <key>bes_actions</key>
+                <dict>
+                    <key>1</key>
+                    <dict>
+                        <key>Description</key>
+                        <array>
+                            <string></string>
+                            <string>Install/Upgrade</string>
+                            <string>.</string>
+                        </array>
+                        <key>ActionName</key>
+                        <string>DefaultAction</string>
+                        <key>ActionNumber</key>
+                        <string>Action1</string>
+                        <key>ActionScript</key>
+                        <string><![CDATA[
+// Install
+wait /usr/sbin/installer -pkg "__Download/%bes_filename%" -target /
+
+]]></string>
+                   </dict>
+                    <key>2</key>
+                    <dict>
+                        <key>Description</key>
+                        <array>
+                            <string></string>
+                            <string>Install/Upgrade</string>
+                            <string> with updates disabled.</string>
+                        </array>
+                        <key>ActionName</key>
+                        <string>Action</string>
+                        <key>ActionNumber</key>
+                        <string>Action2</string>
+                        <key>ActionScript</key>
+                        <string><![CDATA[
+
+//Disable updates
+
+// DMG Install
+delete "/tmp/SOFTWARE.dmg"
+move "__Download/SOFTWARE.dmg" "/tmp/SOFTWARE.dmg"
+
+wait /usr/bin/hdiutil attach -quiet -nobrowse -mountpoint "/tmp/SOFTWARE" "/tmp/SOFTWARE.dmg"
+
+continue if {exists folder "/tmp/SOFTWARE/%NAME%.app"}
+
+if {exists folder "/Applications/%NAME%.app"}
+    wait /bin/rm -rfd "/Applications/%NAME%.app"
+endif
+wait /bin/cp -Rfp "/tmp/SOFTWARE/%NAME%.app" "/Applications"
+
+wait /usr/bin/hdiutil detach -force "/tmp/SOFTWARE"
+
+wait /usr/sbin/chown -R root:admin "/Applications/%NAME%.app"
+wait /bin/chmod -R ug+rw "/Applications/%NAME%.app"
+wait /bin/chmod -R o+r "/Applications/%NAME%.app"
+
+delete "/tmp/Mendeley.dmg"
+
+]]></string>
+                    </dict>
+               </dict>
+            </dict>
+            <key>Processor</key>
+            <string>AutoPkgBESEngine</string>
+        </dict>
+        <dict>
+            <key>Processor</key>
+            <string>BESImporter</string>
+            <key>Arguments</key>
+            <dict>
+                <key>bes_file</key>
+                <string>%bes_file%</string>
+                <key>bes_customsite</key>
+                <string>CUSTOMSITE</string>
+            </dict>
+        </dict>
+    </array>
+</dict>
+</plist>
