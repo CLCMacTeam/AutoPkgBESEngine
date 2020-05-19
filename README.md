@@ -53,7 +53,7 @@ Copy or symlink the BES processors (Code/*.py files) to /Library/AutoPkg/autopkg
 You can specify your BES console settings directly in the recipes or set them globally:
 
 ```
-defaults write com.github.autopkg BES_ROOTSERVER yourBESRootServer
+defaults write com.github.autopkg BES_ROOT_SERVER yourBESRootServer
 defaults write com.github.autopkg BES_USERNAME yourAPIUserAccount
 defaults write com.github.autopkg BES_PASSWORD yourAPIUserAccountPassword
 ```
