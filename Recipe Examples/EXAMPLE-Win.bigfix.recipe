@@ -28,6 +28,17 @@
         <string>This description shows up in the Action Description tab.</string>
         <key>LICENSE</key>
         <string>%NAME% is freeware.</string>
+        <!-- Add Additional Mime Fields Comment this key out if no fields are needed.-->
+        <key>bes_additionalmimefields</key>
+        <dict>
+          <key>x-app-vendor</key>
+          <string>EXAMPLE Vendor</string>
+          <key>x-app-title</key>
+          <string>%NAME%</string>
+          <key>x-app-version</key>
+          <string>%version%</string>
+          <key>x-app-platform</key>
+          <string>Windows</string>
     </dict>
     <key>MinimumVersion</key>
     <string>0.2.9</string>
